@@ -4,7 +4,12 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_client/1]).
+-export([
+         start_link/0,
+         start_client/1,
+         stop_client/1,
+         send_message/2
+        ]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -22,15 +27,24 @@ start_link() ->
 start_client(Options) ->
     supervisor:start_child(
       ?MODULE, 
-      [proplists:get_value(Key, Options, Def) 
+      [
+       [proplists:get_value(Key, Options, Def) 
        || {Key, Def} <-
               [{host, "localhost"},
                {port, 7000},
+               {chan, "#eircc"},
                {nick, "eircc"},
                {pass, undefined},
-               {name, "Erlang IRC Client"}
+               {name, "Erlang IRC Client"},
+               {owner, self()}
               ]
-      ]).
+       ]]).
+
+stop_client(Ref) ->
+    irc_client:stop(Ref).
+
+send_message(Ref, Message) ->
+    irc_client:send_message(Ref, Message).
 
 %% ===================================================================
 %% Supervisor callbacks

@@ -8,7 +8,7 @@
 -module(irc_connection).
 
 %% API
--export([start/3, send/2, terminate/1]).
+-export([start/3, send/2, stop/1]).
 
 -include("irc.hrl").
 
@@ -31,8 +31,8 @@ start(Host, Port, ReportPid) ->
 send(Pid, Cmd) ->
     Pid ! {send, Cmd}.
     
-terminate(Pid) ->
-    Pid ! terminate.
+stop(Pid) ->
+    Pid ! stop.
     
 %%====================================================================
 %% Internal functions
@@ -56,12 +56,12 @@ loop(State) ->
     receive
         {send, Msg} -> % See irc_parser:encode_message/1 for format of Msg
             Data = irc_parser:encode_message(Msg),
-            %io:format("> ~s", [Data]),
+            io:format("> ~s", [Data]),
             gen_tcp:send(State#state.socket, Data),
             loop(State);
             
         {tcp, _Port, Data} ->
-            %io:format("< ~s", [Data]),
+            io:format("< ~s", [Data]),
             RawData = lists:concat([State#state.buffer, Data]),
             RawParsed = irc_parser:parse_data(RawData),
 
@@ -98,8 +98,9 @@ loop(State) ->
             State#state.pid ! socket_closed,
             ok;
             
-        terminate ->
+        stop ->
             io:format("~p: Terminating~n", [?MODULE]),
+            gen_tcp:close(State#state.socket),
             ok;
             
         Other ->
