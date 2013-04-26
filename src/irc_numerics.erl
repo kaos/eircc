@@ -5,9 +5,9 @@
 
 -module(irc_numerics).
 
--include_lib("irc.hrl").
--include_lib("logging.hrl").
--include_lib("eunit.hrl").
+-include("irc.hrl").
+-include("logging.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -export([numeric_to_atom/1,
          atom_to_numeric/1,
@@ -539,7 +539,7 @@ p10b64_to_int_test() ->
     ?assert(p10b64_to_int("A]]") == 4095),
     ?assert(p10b64_to_int("]]") == 4095).
 
-pow(Num, 0) ->
+pow(_Num, 0) ->
     1;
 pow(Num, Exp) ->
     Num * pow(Num, Exp - 1).

@@ -5,9 +5,9 @@
 
 -module(irc_parser).
 
--include_lib("irc.hrl").
--include_lib("logging.hrl").
--include_lib("eunit.hrl").
+-include("irc.hrl").
+-include("logging.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -compile(export_all).
 
