@@ -1,6 +1,6 @@
 {application, eircc,
  [
-  {description, ""},
+  {description, "Erlang IRC Client"},
   {vsn, "1"},
   {registered, []},
   {applications, [
