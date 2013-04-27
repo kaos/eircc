@@ -111,15 +111,14 @@ encode_message({quit, Message}) -> io_lib:format("QUIT :~s~n", [Message]);
 encode_message({say, Channel, Message}) ->
     io_lib:format("PRIVMSG ~s :~s~n", [Channel, Message]);
 encode_message({action, Channel, Message}) ->
-    io_lib:format("PRIVMSG ~s :~sACTION ~s~s~n",
-                  [Channel, [1],
-                   Message, [1]]);
+    io_lib:format("PRIVMSG ~s :ACTION ~s~n",
+                  [Channel, Message]);
                    
 encode_message({nick, Nickname}) -> io_lib:format("NICK ~s~n", [Nickname]);
 encode_message({pass, Password}) -> io_lib:format("PASS ~s~n", [Password]);
 encode_message({user, Nickname, HostName, ServerName, RealName}) ->
     io_lib:format("USER ~s ~s ~s ~s~n", [Nickname, HostName, ServerName, RealName]);
-encode_message({nickserv_identify, Password}) -> io_lib:format("NickServ IDENTIFY ~p~n", [Password]).
+encode_message({nickserv_identify, Password}) -> io_lib:format("NickServ IDENTIFY ~s~n", [Password]).
 
 split(Line) ->
     split($\s, Line).

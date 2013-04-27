@@ -73,7 +73,10 @@ connecting(socket_opened, State) ->
     irc_connection:send(Connection, {nick, Nickname}),
     irc_connection:send(Connection, {user, Nickname, "0", "*", RealName}),
 
-    {next_state, authenticating, State}.
+    {next_state, authenticating, State};
+connecting({send_message, _}, State) ->
+    %% drop
+    {next_state, connecting, State}.
 
 authenticating({authenticated, _}, State) ->
     Connection = State#state.connection,
@@ -83,7 +86,10 @@ authenticating({authenticated, _}, State) ->
     irc_connection:send(Connection, {nickserv_identify, Password}),
     io:format("~p: Joining channel ~p~n", [?MODULE, Channel]),
     irc_connection:send(Connection, {join, Channel}),
-    {next_state, joining, State}.
+    {next_state, joining, State};
+authenticating({send_message, _}, State) ->
+    %% drop
+    {next_state, authenticating, State}.
 
 joining({joined, _}, State) ->
     %%Connection = State#state.connection,
@@ -91,7 +97,10 @@ joining({joined, _}, State) ->
 
     io:format("~p: Joined channel~n", [?MODULE]),
     %%irc_connection:send(Connection, {say, Channel, "Hello!"}),
-    {next_state, connected, State}.
+    {next_state, connected, State};
+joining({send_message, _}, State) ->
+    %% drop
+    {next_state, joining, State}.
 
 connected({message, Command}, State) ->
     {Recipient, Message} = split_message_arg(Command#irc_cmd.args),
@@ -111,7 +120,13 @@ connected({message, Command}, State) ->
     {next_state, connected, State};
 connected({send_message, Message}, 
           #state{ connection=Con, channel=Chan }=State) ->
-    irc_connection:send(Con, {say, Chan, Message}),
+    Cmd = case Message of
+              "/me " ++ Action ->
+                  {action, Chan, Action};
+              _ -> 
+                  {say, Chan, Message}
+          end,
+    irc_connection:send(Con, Cmd),
     {next_state, connected, State}.
 
 
