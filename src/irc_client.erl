@@ -119,7 +119,8 @@ connected({message, Command}, State) ->
 
     {next_state, connected, State};
 connected({send_message, Message}, 
-          #state{ connection=Con, channel=Chan }=State) ->
+          #state{ connection=Con, channel=Chan }=State) 
+  when is_list(Message) ->
     Cmd = case Message of
               "/me " ++ Action ->
                   {action, Chan, Action};
@@ -127,8 +128,10 @@ connected({send_message, Message},
                   {say, Chan, Message}
           end,
     irc_connection:send(Con, Cmd),
+    {next_state, connected, State};
+connected({send_message, Message}, #state{ connection=Con }=State) ->
+    irc_connection:send(Con, Message),
     {next_state, connected, State}.
-
 
 code_change(_OldVsn, StateName, StateData, _Extra) ->
     {ok, StateName, StateData}.
@@ -156,7 +159,7 @@ handle_sync_event(_Event, _From, StateName, StateData) ->
 
 terminate(Reason, _StateName, StateData) ->
     io:format("~p: Terminating (~p)~n", [?MODULE, Reason]),
-    irc_connection:terminate(StateData#state.connection),
+    irc_connection:stop(StateData#state.connection),
     ok.
 
 %%====================================================================

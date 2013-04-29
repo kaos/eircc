@@ -22,7 +22,7 @@
 %% Description:
 %%--------------------------------------------------------------------
 start(Host, Port, ReportPid) ->
-    spawn(fun() ->
+    spawn_link(fun() ->
         {ok, Sock} = connect(Host, Port),
         ReportPid ! socket_opened, 
         loop(#state{socket=Sock, pid = ReportPid})        

@@ -109,7 +109,10 @@ encode_message({pong, Id})      -> io_lib:format("PONG ~s~n", [Id]);
 encode_message({join, Channel}) -> io_lib:format("JOIN ~s~n", [Channel]);
 encode_message({quit, Message}) -> io_lib:format("QUIT :~s~n", [Message]);
 encode_message({say, Channel, Message}) ->
-    io_lib:format("PRIVMSG ~s :~s~n", [Channel, Message]);
+    [
+     io_lib:format("PRIVMSG ~s :~s~n", [Channel, Msg])
+     || Msg <- string:tokens(lists:flatten(Message), "\r\n")
+    ];
 encode_message({action, Channel, Message}) ->
     io_lib:format("PRIVMSG ~s :ACTION ~s~n",
                   [Channel, Message]);
