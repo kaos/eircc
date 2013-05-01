@@ -29,18 +29,18 @@
 -include("irc.hrl").
 -include("eircc.hrl").
 
--record(state, {connection, hostname, port, channel,
+-record(state, {connection, hostname, port, channels,
                 nickname, password, real_name, owner}).
 
 %%====================================================================
 %% API
 %%====================================================================
 
-start_link([Hostname, Port, Channel, Nickname, Password, RealName, Owner]) ->
+start_link([Hostname, Port, Channels, Nickname, Password, RealName, Owner]) ->
     gen_fsm:start_link(?MODULE, #state{
                                    hostname=Hostname,
                                    port=Port,
-                                   channel=Channel,
+                                   channels=Channels,
                                    nickname=Nickname,
                                    password=Password,
                                    real_name=RealName,
@@ -80,29 +80,34 @@ connecting({send_message, _}, State) ->
 
 authenticating({authenticated, _}, State) ->
     Connection = State#state.connection,
-    Channel = State#state.channel,
+    Channels = State#state.channels,
     Password = State#state.password,
 
     irc_connection:send(Connection, {nickserv_identify, Password}),
-    io:format("~p: Joining channel ~p~n", [?MODULE, Channel]),
-    irc_connection:send(Connection, {join, Channel}),
-    {next_state, joining, State};
+
+    %% hup!? fixme: add identifying state before joining channels...
+
+    io:format("~p: Joining channels ~p~n", [?MODULE, Channels]),
+    irc_connection:send(Connection, {join, hd(Channels)}),
+    {next_state, joining, {tl(Channels), State}};
 authenticating({send_message, _}, State) ->
     %% drop
     {next_state, authenticating, State}.
 
-joining({joined, _}, State) ->
-    %%Connection = State#state.connection,
-    %%Channel = State#state.channel,
-
-    io:format("~p: Joined channel~n", [?MODULE]),
-    %%irc_connection:send(Connection, {say, Channel, "Hello!"}),
-    {next_state, connected, State};
+joining({joined, Cmd}, {Join, State}) ->
+    io:format("~p: Joined channel ~s~n", [?MODULE, Cmd#irc_cmd.args]),
+    case Join of
+        [] ->
+            {next_state, connected, State};
+        [C|Cs] ->
+            irc_connection:send(State#state.connection, {join, C}),
+            {next_state, joining, {Cs, State}}
+    end;
 joining({send_message, _}, State) ->
     %% drop
     {next_state, joining, State}.
 
-connected({message, Command}, State) ->
+connected({recv_message, Command}, State) ->
     {Recipient, Message} = split_message_arg(Command#irc_cmd.args),
     Sender = (Command#irc_cmd.source)#user.nick,
     Nick = State#state.nickname,
@@ -118,19 +123,11 @@ connected({message, Command}, State) ->
     end,
 
     {next_state, connected, State};
-connected({send_message, Message}, 
-          #state{ connection=Con, channel=Chan }=State) 
-  when is_list(Message) ->
-    Cmd = case Message of
-              "/me " ++ Action ->
-                  {action, Chan, Action};
-              _ -> 
-                  {say, Chan, Message}
-          end,
-    irc_connection:send(Con, Cmd),
+connected({send_message, {Chan, Message}}, State) ->
+    send_message(Chan, Message, State),
     {next_state, connected, State};
-connected({send_message, Message}, #state{ connection=Con }=State) ->
-    irc_connection:send(Con, Message),
+connected({send_message, Message}, #state{ channels=[Chan|_] }=State) ->
+    send_message(Chan, Message, State),
     {next_state, connected, State}.
 
 code_change(_OldVsn, StateName, StateData, _Extra) ->
@@ -167,10 +164,19 @@ terminate(Reason, _StateName, StateData) ->
 %%====================================================================
 process_command(authenticating, endofmotd) -> authenticated;
 process_command(joining, join)             -> joined;
-process_command(connected, privmsg)        -> message;
+process_command(connected, privmsg)        -> recv_message;
 process_command(_, _) -> undefined.
 
 split_message_arg(Data) ->
     Index = string:str(Data, " :"),
     {string:substr(Data, 1, Index-1),
      string:substr(Data, Index+2, string:len(Data) - (Index-1))}.
+
+send_message(Chan, Message, #state{ connection=Con }) ->
+    Cmd = case Message of
+              "/me " ++ Action ->
+                  {action, Chan, Action};
+              _ -> 
+                  {say, Chan, Message}
+          end,
+    irc_connection:send(Con, Cmd).

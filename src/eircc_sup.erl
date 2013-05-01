@@ -32,7 +32,7 @@ start_client(Options) ->
        || {Key, Def} <-
               [{host, "localhost"},
                {port, 7000},
-               {chan, "#eircc"},
+               {join, ["#eircc"]},
                {nick, "eircc"},
                {pass, undefined},
                {name, "Erlang IRC Client"},

@@ -31,8 +31,8 @@ parse_line(Line) ->
     try parse_line(Line, #irc_cmd{raw=Line}) of
         Value -> Value
     catch
-        _:_ -> 
-            io:format("~p: Bad data =>~n~s", [?MODULE, Line]),
+        Class:Msg -> 
+            io:format("~p: parse_line failed: ~s:~p for line:~n~s", [?MODULE, Class, Msg, Line]),
             {bad_data, Line}
     end.
 
