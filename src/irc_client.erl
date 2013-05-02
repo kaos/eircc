@@ -81,13 +81,15 @@ connecting({send_message, _}, State) ->
 authenticating({authenticated, _}, State) ->
     Connection = State#state.connection,
     Channels = State#state.channels,
-    Password = State#state.password,
-
-    irc_connection:send(Connection, {nickserv_identify, Password}),
+    case State#state.password of
+        undefined -> nop;
+        Password ->
+            irc_connection:send(Connection, {nickserv_identify, Password})
+    end,
 
     %% hup!? fixme: add identifying state before joining channels...
 
-    io:format("~p: Joining channels ~p~n", [?MODULE, Channels]),
+    io:format("~p: Joining channels: ~s~n", [?MODULE, string:join(Channels, ", ")]),
     irc_connection:send(Connection, {join, hd(Channels)}),
     {next_state, joining, {tl(Channels), State}};
 authenticating({send_message, _}, State) ->
@@ -113,12 +115,10 @@ connected({recv_message, Command}, State) ->
     Nick = State#state.nickname,
     case Recipient of
         Nick ->
-            io:format("~p: Private message from ~s: ~s~n",
-                      [?MODULE, Sender, Message]),
+            %% io:format("~p: Private message from ~s: ~s~n", [?MODULE, Sender, Message]),
             State#state.owner ! #eircc{ from=Sender, message=Message };
         Channel ->
-            io:format("~p: Message to channel ~s from ~s: ~s~n",
-                      [?MODULE, Recipient, Sender, Message]),
+            %% io:format("~p: Message to channel ~s from ~s: ~s~n", [?MODULE, Recipient, Sender, Message]),
             State#state.owner ! #eircc{ from=Sender, channel=Channel, message=Message}
     end,
 

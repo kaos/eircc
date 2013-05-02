@@ -13,27 +13,37 @@
 
 -define(IS_DIGIT(Var), $0 =< Var, Var =< $9).
 
-cut_line(Data) ->
-    Pos = string:str(Data, "\r\n"),
-    case Pos of
-        0 -> {Data, []};
-        _ -> {string:substr(Data, 1, Pos-1),
-              string:substr(Data, Pos+2, string:len(Data) - (Pos-1))}
-    end.
+ends_with(A, A) ->
+    true;
+ends_with([_|Data], Str) ->
+    ends_with(Data, Str);
+ends_with(_, _) ->
+    false.
 
 parse_data([]) ->
     [];
 parse_data(Data) ->
-    {Line, Rest} = cut_line(Data),
-    [parse_line(Line)|parse_data(Rest)].
+    case ends_with(Data, "\r\n") of
+        true ->
+            %% got complete lines
+            [parse_line(Line) || Line <- string:tokens(Data, "\r\n")];
+        false ->
+            %% last line incomplete
+            Lines = lists:reverse(string:tokens(Data, "\r\n")),
+            lists:reverse(
+              [hd(Lines)
+               |[parse_line(Line) || Line <- tl(Lines)]])
+    end.
+
 
 parse_line(Line) ->
     try parse_line(Line, #irc_cmd{raw=Line}) of
         Value -> Value
     catch
-        Class:Msg -> 
-            io:format("~p: parse_line failed: ~s:~p for line:~n~s", [?MODULE, Class, Msg, Line]),
-            {bad_data, Line}
+        _Class:_Msg -> 
+            io:format("~p: parse_line failed: ~s:~p for line:~n~s", [?MODULE, _Class, _Msg, Line]),
+            %% drop bad lines
+            ""
     end.
 
 parse_line(Line = [$E,$R,$R,$O,$R,$\s|_], Cmd) ->

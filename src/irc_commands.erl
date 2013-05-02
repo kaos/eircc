@@ -180,7 +180,7 @@ ctcp_from_list(Cmd) -> throw({invalid_command, Cmd}).
 %% @spec to_list(atom()) -> string()
 %% @doc Converts the irc command atom to its raw string form or throws
 %% invalid_command.
-%% @throws {invalid_command, Cmd::string()}
+%% @throws {invalid_command, Cmd::atom()}
 %% @end 
 to_list(privmsg) -> "PRIVMSG";
 to_list(notice) -> "NOTICE";
